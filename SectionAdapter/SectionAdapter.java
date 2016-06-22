@@ -1,4 +1,4 @@
-package np.com.aanalbasaula.adapters;
+package np.com.aanalbasaula.shopsmart.adapters;
 
 import android.content.Context;
 import android.util.Log;
@@ -21,7 +21,7 @@ public class SectionAdapter<T, D> extends BaseAdapter {
 
     private static final String TAG = SectionAdapter.class.getSimpleName();
 
-    private Map<D, List<T>> dataTree;
+    protected Map<D, List<T>> dataTree;
     private SectionViewFactory<T, D> viewFactory;
 
     public SectionAdapter(SectionViewFactory<T, D> viewFactory) {
@@ -119,7 +119,9 @@ public class SectionAdapter<T, D> extends BaseAdapter {
     }
 
     public void addSection(D section){
-        dataTree.put(section, new ArrayList<T>());
+        if(!dataTree.containsKey(section)) {
+            dataTree.put(section, new ArrayList<T>());
+        }
     }
 
     public List<T> getSection(D section){
