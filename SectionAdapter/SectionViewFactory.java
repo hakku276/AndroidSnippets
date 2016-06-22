@@ -1,4 +1,4 @@
-package np.com.aanalbasaula.adapters;
+package np.com.aanalbasaula.shopsmart.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;

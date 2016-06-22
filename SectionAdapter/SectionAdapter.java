@@ -7,10 +7,13 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 /**
@@ -19,10 +22,15 @@ import java.util.Map;
  */
 public class SectionAdapter<T, D> extends BaseAdapter {
 
+    public enum DisplayOrder{
+        normal, reverse
+    }
+
     private static final String TAG = SectionAdapter.class.getSimpleName();
 
     protected Map<D, List<T>> dataTree;
     private SectionViewFactory<T, D> viewFactory;
+    private DisplayOrder order;
 
     public SectionAdapter(SectionViewFactory<T, D> viewFactory) {
         if (viewFactory == null) {
@@ -30,6 +38,16 @@ public class SectionAdapter<T, D> extends BaseAdapter {
         }
         this.viewFactory = viewFactory;
         dataTree = new LinkedHashMap<>();
+        order = DisplayOrder.normal;
+    }
+
+    public SectionAdapter(SectionViewFactory<T, D> viewFactory, DisplayOrder order) {
+        if (viewFactory == null) {
+            throw new RuntimeException("View Factory Cannot be null");
+        }
+        this.viewFactory = viewFactory;
+        dataTree = new LinkedHashMap<>();
+        this.order = order;
     }
 
     @Override
@@ -45,18 +63,38 @@ public class SectionAdapter<T, D> extends BaseAdapter {
 
     @Override
     public Object getItem(int position) {
-        for (D key :
-                dataTree.keySet()) {
-            if(position == 0){
-                return key;
+        if(order == DisplayOrder.normal) {
+            for (D key :
+                    dataTree.keySet()) {
+                if (position == 0) {
+                    return key;
+                }
+                //reduce the position for this section display
+                position--;
+                if (position < dataTree.get(key).size()) {
+                    //the item is in this section
+                    return dataTree.get(key).get(position);
+                }
+                position = position - dataTree.get(key).size();
             }
-            //reduce the position for this section display
-            position--;
-            if(position < dataTree.get(key).size()){
-                //the item is in this section
-                return dataTree.get(key).get(position);
+        } else {
+            LinkedList<D> keyList = new LinkedList<>(dataTree.keySet());
+            ListIterator<D> iterator = keyList.listIterator(keyList.size());
+            while(iterator.hasPrevious()){
+                D key = iterator.previous();
+                if(position == 0){
+                    return key;
+                }
+                //reduce the position for this section display
+                position--;
+                if (position < dataTree.get(key).size()) {
+                    //the item is in this section
+                    List<T> dataList = dataTree.get(key);
+                    //get the list data in reverse order
+                    return dataList.get(dataList.size()-1-position);
+                }
+                position = position - dataTree.get(key).size();
             }
-            position = position - dataTree.get(key).size();
         }
         return null;
     }
@@ -74,25 +112,50 @@ public class SectionAdapter<T, D> extends BaseAdapter {
 
     @Override
     public int getItemViewType(int position) {
+        Log.d(TAG, "getItemViewType: " + position);
         int section = 0;
-        for (D key :
-                dataTree.keySet()) {
-            if(position == 0){
-                //position 0 means that the item is a section header
-                return 0;
+        if(order == DisplayOrder.normal) {
+            Log.d(TAG, "getItemViewType: Normal Display Order");
+            for (D key :
+                    dataTree.keySet()) {
+                if (position == 0) {
+                    //position 0 means that the item is a section header
+                    return 0;
+                }
+                //reduce the position for this section display
+                position--;
+                if (position < dataTree.get(key).size()) {
+                    //position lies within the item list for this section
+                    return viewFactory.getViewType(section, position);
+                }
+                //reduce the position for the items under the section
+                position = position - dataTree.get(key).size();
+                //moving on to another section
+                section++;
             }
-            //reduce the position for this section display
-            position--;
-            if(position < dataTree.get(key).size()){
-                //position lies within the item list for this section
-                return viewFactory.getViewType(section,position);
+        }else {
+            Log.d(TAG, "getItemViewType: Reverse Display Order (keySetSize - " + dataTree.size()+")");
+            LinkedList<D> keyList = new LinkedList<>(dataTree.keySet());
+            ListIterator<D> iterator = keyList.listIterator(keyList.size());
+            while(iterator.hasPrevious()){
+                D key = iterator.previous();
+                if(position == 0){
+                    return 0;
+                }
+                //reduce the position for this section display
+                position--;
+                if (position < dataTree.get(key).size()) {
+                    //the item is in this section
+                    List<T> dataList = dataTree.get(key);
+                    //position lies within the item list for this section
+                    return viewFactory.getViewType(section, dataList.size()-1-position);
+                }
+                position = position - dataTree.get(key).size();
+                //moving on to another section
+                section ++;
             }
-            //reduce the position for the items under the section
-            position = position - dataTree.get(key).size();
-            //moving on to another section
-            section++;
         }
-        return 0;
+        return -1;
     }
 
     @Override
